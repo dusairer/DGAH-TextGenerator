@@ -59,7 +59,7 @@
     createCanvas(windowWidth, windowHeight);
 
     // Create grammar from loaded data
-    grammar = tracery.createGrammar(grammarData);
+    setTimeout(grammar = tracery.createGrammar(grammarData), 1000);
 
     textSize(24);
     fill(255);
