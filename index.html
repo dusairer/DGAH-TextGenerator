@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spider-Man Demo</title>
+  
+  <!-- p5.js -->
+  <script src="p5.min.js"></script>
+  <!-- Tracery -->
+  <script src="tracery.min.js"></script>
+  <!-- jQuery (if needed for other code) -->
+  <script src="jquery-3.7.1.min.js"></script>
+  
+  <style>
+    /* Minimal body reset */
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    /* p5 canvas will be displayed here */
+    body {
+      overflow: hidden; /* optional: hide scrollbars */
+      background: #111; /* fallback if p5 not loaded for some reason */
+    }
+  </style>
+</head>
+
+<body>
+<script>
+  // ---------- GLOBAL VARIABLES ----------
+  let grammarData;           // Will hold the loaded JSON
+  let grammar;               // Tracery grammar object
+  let currentTitle = "";
+  let currentVerse = "";
+
+  let lastUpdate = 0;
+  const updateInterval = 3000; // 3 seconds
+
+  // Array to store spider objects
+  let spiders = [];
+  const numSpiders = 8; // Number of spiders
+
+  // Possible spider colors (dark/brown/gray tints)
+  const spiderColors = [
+    [30, 30, 30],    // dark gray
+    [60, 40, 20],    // brownish
+    [80, 20, 20],    // dark red-brown
+    [45, 30, 10],    // muted brown
+    [20, 20, 20]     // almost black
+  ];
+
+  // ---------- p5.js FUNCTIONS ----------
+  function preload() {
+    grammarData = loadJSON("grammar.json"); // Load grammar JSON
+  }
+
+  function setup() {
+    createCanvas(windowWidth, windowHeight);
+
+    // Create grammar from loaded data
+    grammar = tracery.createGrammar(grammarData);
+
+    textSize(24);
+    fill(255);
+    textAlign(CENTER, CENTER);
+
+    // Generate initial text
+    generateNewSpideyText();
+
+    // Initialize our spiders
+    for (let i = 0; i < numSpiders; i++) {
+      spiders.push(createSpider());
+    }
+  }
+
+  function draw() {
+    // Spidey-red background (#ED1D24)
+    background(237, 29, 36);
+
+    // Draw big web patterns in each corner
+    drawSpiderWebs();
+
+    // Update text if interval has passed
+    if (millis() - lastUpdate >= updateInterval) {
+      generateNewSpideyText();
+      lastUpdate = millis();
+    }
+
+    // Display the generated text
+    push();
+      fill(255);
+      // Title near top
+      text(currentTitle, width / 2, height * 0.15);
+
+      // Verse in the middle, wrapped
+      textSize(18);
+      let boxW = width * 0.3;
+      let boxH = height * 0.5;
+      text(
+        currentVerse,
+        width / 2 - boxW / 2,
+        height / 2 - boxH / 2,
+        boxW,
+        boxH
+      );
+    pop();
+
+    // Update + draw each spider
+    for (let s of spiders) {
+      updateSpider(s);
+      drawSpider(s);
+    }
+  }
+
+  // Keep canvas full window if resized
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+  }
+
+  // ---------- TRACERY FUNCTIONS ----------
+  function generateNewSpideyText() {
+    currentTitle = grammar.flatten("#titles#");
+    currentVerse = grammar.flatten("#verse#");
+  }
+
+  // ---------- WEB PATTERN FUNCTIONS ----------
+  function drawSpiderWebs() {
+    stroke(40, 0, 0, 80);
+    strokeWeight(2);
+    noFill();
+
+    // top-left corner
+    push();
+      translate(0, 0);
+      drawWebPattern();
+    pop();
+
+    // top-right corner
+    push();
+      translate(width, 0);
+      scale(-1, 1);
+      drawWebPattern();
+    pop();
+
+    // bottom-left corner
+    push();
+      translate(0, height);
+      scale(1, -1);
+      drawWebPattern();
+    pop();
+
+    // bottom-right corner
+    push();
+      translate(width, height);
+      scale(-1, -1);
+      drawWebPattern();
+    pop();
+  }
+
+  function drawWebPattern() {
+    let maxR = 250;         // web extends 250 pixels
+    let radialStep = PI/12; // more radial lines
+
+    // Draw radial lines
+    for (let a = 0; a < TWO_PI/2; a += radialStep) {
+      let x = maxR * cos(a);
+      let y = maxR * sin(a);
+      line(0, 0, x, y);
+    }
+
+    // Draw concentric arcs
+    for (let r = 50; r <= maxR; r += 50) {
+      arc(0, 0, r*2, r*2, 0, PI/2);
+    }
+  }
+
+  // ---------- SPIDER FUNCTIONS ----------
+
+  function createSpider() {
+    // Create a spider object with random position, speed, size, color
+    return {
+      x: random(width),
+      y: random(height),
+      dx: random(-2, 2),
+      dy: random(-2, 2),
+      size: random(20, 50),
+      color: random(spiderColors)
+    };
+  }
+
+  // Moves the spider and bounces at edges
+  function updateSpider(spider) {
+    spider.x += spider.dx;
+    spider.y += spider.dy;
+
+    // Bounce if hits horizontal edges
+    if (spider.x < 0) {
+      spider.x = 0;
+      spider.dx *= -1;
+    }
+    if (spider.x > width) {
+      spider.x = width;
+      spider.dx *= -1;
+    }
+
+    // Bounce if hits vertical edges
+    if (spider.y < 0) {
+      spider.y = 0;
+      spider.dy *= -1;
+    }
+    if (spider.y > height) {
+      spider.y = height;
+      spider.dy *= -1;
+    }
+  }
+
+  function drawSpider(spider) {
+    // 1) Determine angle to align with velocity
+    let angle = atan2(spider.dy, spider.dx);
+    
+    push();
+      // Move and rotate so spider faces direction of travel
+      translate(spider.x, spider.y);
+      rotate(angle);
+
+      // BODY COLOR
+      fill(spider.color[0], spider.color[1], spider.color[2]);
+      noStroke();
+
+      // Cephalothorax (front segment)
+      ellipse(0, 0, spider.size * 0.6, spider.size * 0.4);
+
+      // Abdomen (larger rear segment), offset to the right in local coords
+      ellipse(
+        spider.size * 0.35,
+        0,
+        spider.size * 0.7,
+        spider.size * 0.5
+      );
+
+      // (Optional) Head - small ellipse offset left from cephalothorax
+      fill(spider.color[0]*0.8, spider.color[1]*0.8, spider.color[2]*0.8);
+      ellipse(
+        -spider.size * 0.3,
+        0,
+        spider.size * 0.3,
+        spider.size * 0.25
+      );
+
+      // LEGS
+      stroke(0);
+      strokeWeight(spider.size * 0.04);
+
+      // We'll anchor legs near the center (0,0) to slightly behind it
+      let bodyOffset = spider.size * 0.3;
+      let legSpan = spider.size * 0.8;
+
+      // Each leg line is carefully placed around the Y axis
+      // 4 on top, 4 on bottom
+      // Left side legs
+      line(
+        -bodyOffset, -spider.size * 0.1,
+        -legSpan,    -spider.size * 0.4
+      );
+      line(
+        -bodyOffset,  spider.size * 0.1,
+        -legSpan,     spider.size * 0.4
+      );
+      line(
+        -bodyOffset*1.1, -spider.size * 0.25,
+        -legSpan*0.9,    -spider.size * 0.6
+      );
+      line(
+        -bodyOffset*1.1,  spider.size * 0.25,
+        -legSpan*0.9,     spider.size * 0.6
+      );
+
+      // Right side legs
+      line(
+        bodyOffset*0.5, -spider.size * 0.1,
+        legSpan,        -spider.size * 0.4
+      );
+      line(
+        bodyOffset*0.5,  spider.size * 0.1,
+        legSpan,         spider.size * 0.4
+      );
+      line(
+        bodyOffset*0.6, -spider.size * 0.25,
+        legSpan*0.9,    -spider.size * 0.6
+      );
+      line(
+        bodyOffset*0.6,  spider.size * 0.25,
+        legSpan*0.9,     spider.size * 0.6
+      );
+
+      // Eyes (2 small circles on the head)
+      fill(0);
+      noStroke();
+      ellipse(-spider.size * 0.35, -spider.size * 0.07, spider.size * 0.05);
+      ellipse(-spider.size * 0.35,  spider.size * 0.07, spider.size * 0.05);
+
+    pop();
+  }
+</script>
+</body>
+</html>
