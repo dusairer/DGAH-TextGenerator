@@ -55,11 +55,18 @@
     grammarData = loadJSON("grammar.json"); // Load grammar JSON
   }
 
+  function testGrammar() {
+    if (grammarData) {
+      grammar = tracery.createGrammar(grammarData);
+    } else {
+      setTimeout(testGrammar(), 1000);
+    }
+    
   function setup() {
     createCanvas(windowWidth, windowHeight);
 
     // Create grammar from loaded data
-    setTimeout(grammar = tracery.createGrammar(grammarData), 1000);
+    testGrammar();
 
     textSize(24);
     fill(255);
